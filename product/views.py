@@ -1,23 +1,42 @@
 from django.shortcuts import render, get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from product.serializers import ProductSerializer 
-from product.models import Product, Category
+from product.serializers import ProductSerializer, CategorySerializer, ReviewSerializer
+from product.models import Product, Category, Review
+from django.db.models import Count
+from rest_framework.viewsets import ModelViewSet
+from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
+from product.filters import PrductFilter
+from rest_framework.filters import SearchFilter, OrderingFilter
 
 
 # Create your views here.
-@api_view()
-def product_view(request):
-    product = Product.objects.select_related('category').all()
-    serializer = ProductSerializer(product, many=True)
-    return Response(serializer.data)
+class ProductViewset(ModelViewSet):
+    queryset = Product.objects.select_related('category').all()
+    serializer_class = ProductSerializer
+    filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
+    filterset_class = PrductFilter
+    search_fields = ['name','description']
+    ordering_fields = ['price']
 
-@api_view()
-def single_product_view(request, id):
-    single_product = get_object_or_404(Product, pk=id)
-    serializer = ProductSerializer(single_product)
-    return Response(serializer.data)
+class CategoryViewset(ModelViewSet):
+    queryset = Category.objects.annotate(product_count=Count('products')).all()
+    serializer_class = CategorySerializer
 
-@api_view()
-def category_view(request):
-    return Response("categories")
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.product_count <= 0:
+            return Response({"message": "Category should not delete without product"})
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+        
+       
+class ReviewViewset(ModelViewSet):
+    def get_queryset(self):
+        product_id = self.kwargs['product_pk']
+        return Review.objects.filter(product_id=product_id).all()
+    serializer_class = ReviewSerializer
+    def get_serializer_context(self):
+        return {'product_id': self.kwargs['product_pk']}
+
