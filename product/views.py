@@ -9,6 +9,8 @@ from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
 from product.filters import PrductFilter
 from rest_framework.filters import SearchFilter, OrderingFilter
+from product.paginations import ProductPagination
+from api.permissions import IsAdminOnly
 
 
 # Create your views here.
@@ -17,12 +19,15 @@ class ProductViewset(ModelViewSet):
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend,SearchFilter,OrderingFilter]
     filterset_class = PrductFilter
+    pagination_class = ProductPagination
     search_fields = ['name','description']
     ordering_fields = ['price']
+    permission_classes = [IsAdminOnly]
 
 class CategoryViewset(ModelViewSet):
     queryset = Category.objects.annotate(product_count=Count('products')).all()
     serializer_class = CategorySerializer
+    permission_classes = [IsAdminOnly]
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
