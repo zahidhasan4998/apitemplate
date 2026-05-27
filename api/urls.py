@@ -18,5 +18,7 @@ cart_nested_router.register('items', CartItemView, basename='carts_list')
 urlpatterns = [
     path('', include(router.urls)),
     path('', include(nested_router.urls)),
-    path('', include(cart_nested_router.urls))
+    path('', include(cart_nested_router.urls)),
+    path('auth/', include('djoser.urls')),
+    path('auth/', include('djoser.urls.jwt'))
 ]
